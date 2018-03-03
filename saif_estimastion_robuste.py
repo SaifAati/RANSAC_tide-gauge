@@ -21,10 +21,7 @@ import os
 import numpy as np
 import matplotlib.pylab as plt
 
-#=======================================================================
-"""Loading Data"""
-#=======================================================================
-
+#===========================Loading Data=================================
 def dataset():
     date = []
     data_mm=[]
@@ -37,6 +34,78 @@ def dataset():
             data_mm.append(int(line[10:-1]))
 
     return (date,data_mm)
+#==============================Step1=========================================
+"""
+Last squares method: in order to estimate an affine relation between the variables
+( data_mm[]=sea level and date[]= dates),in other words look for a line that fits
+as well as possible to this cloud of points.
+INPUT:
+     data_mm[]=sea level
+     date[]= dates
+
+The model:f(t) = a(t-t0)+ b
+
+"""
+#============================================================================
+def lastsquare_1(date,data_mm):
+    date_ = np.asarray(date)
+    #stochastic model
+    l = np.asarray(data_mm)                             # observation
+    n = np.shape(l)[0]                                  # observation dimension
+    Kl = np.eye(n)                                      # matrix var/covar
+    sigma_0 = 1
+    Ql = (1/(sigma_0)**2)*Kl
+    P = np.linalg.inv(Ql)                               # weight matrix
+    # X parameter =[a,b]
+    #initial parameter
+    X = [1,1]
+    # closing gap matrix : B
+    B =0*l
+    for i in range (n):
+        B[i] = l[i]- X[0]*(date_[i]-date_[0])+X[1]
+
+    #Jacobian matrix: A
+    A = np.zeros((n,len(X)))
+    for i in range(n):
+        A[i,0] = date_[i]-date_[0]
+        A[i,1] = 1
+
+    dxx = calculation_matrix(A=A,P=P,B=B,X0=X,Obs=l,Ql=Ql)[0]
+    K = 0
+    while any(abs(dxx) > 1e-6) and (K <= 10):
+        B = 0 * l
+        for i in range(n):
+            B[i] = l[i] - X[0] * (date_[i] - date_[0]) + X[1]
+
+        A = np.zeros((n, len(X)))
+        for i in range(n):
+            A[i, 0] = date_[i] - date_[0]
+            A[i, 1] = 1
+
+
+        dxx,X_chap,Qxx,V_chap,ll,Qvv,Qll = calculation_matrix(A=A,P=P,B=B,X0=X,Obs=l,Ql=Ql)
+        X = X_chap
+        K = K + 1
+    return
+
+def calculation_matrix(A,P,B,X0,Obs,Ql):
+    #dx_chap_matrix
+    S1=np.linalg.inv(np.dot(A.T,np.dot(P,A)))
+    dx_chap = np.dot(S1,np.dot(A.T,np.dot(P,B)))
+    #X_chap
+    x_chap = X0 + dx_chap
+    #Qxx
+    Qxx = np.linalg.inv(np.dot(A.T,np.dot(P,A)))
+    #V_chap
+    V_chap = B - np.dot(A, dx_chap)
+    #L_chap
+    l_chapeau = Obs - V_chap
+    #Qv_chap
+    Qvv = Ql - np.dot(A, np.dot(Qxx, A.T))
+    #Ql_chap
+    Qll = Ql - Qvv
+
+    return (dx_chap,x_chap,Qxx,V_chap,l_chapeau,Qvv,Qll)
 
 # ======================================================================
 # Displaying the initial obs, the compensated heights, the residuals,
@@ -60,6 +129,7 @@ if __name__ == '__main__':
     date,h_mm = dataset()
     print(date)
     print(h_mm)
+    lastsquare_1(date=date,data_mm=h_mm)
     display(date,h_mm)
 
 
