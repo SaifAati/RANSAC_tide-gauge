@@ -59,25 +59,16 @@ def lastsquare_1(date,data_mm):
     # X parameter =[a,b]
     #initial parameter
     X = [0.2948, 5103]
-    # closing gap matrix : B
-    B =0*l
-    for i in range (n):
-        B[i] = l[i]- X[0]*(date_[i]-date_[0])-X[1]
 
-    #Jacobian matrix: A
-    A = np.zeros((n,len(X)),dtype='double')
-    for i in range(n):
-        A[i,0] = date_[i]-date_[0]
-        A[i,1] = 1
-
-    dxx = calculation_matrix(A=A,P=P,B=B,X0=X,Obs=l,Ql=Ql)[0]
+    dxx=np.ones(len(l))
     K = 0
     while any(abs(dxx) > 10e-7) and (K <= 100):
+        # closing gap matrix : B
         B = np.zeros((n),dtype='double')
         for i in range(n):
             B[i] = l[i] - X[0] * (date_[i] - date_[0]) - X[1]
-
-        A = np.zeros((n, len(X)))
+        # Jacobian matrix: A
+        A = np.zeros((n, len(X)),dtype='double')
         for i in range(n):
             A[i, 0] = date_[i] - date_[0]
             A[i, 1] = 1
@@ -90,6 +81,53 @@ def lastsquare_1(date,data_mm):
     print("X=",X)
 
     return X
+def Meansquare(date,h_,X_droite):
+    t = np.asarray(date)
+    # stochastic model
+    l = np.asarray(h_)  # observation
+    n = np.shape(l)[0]  # observation dimension
+    Kl = np.eye(n)  # matrix var/covar
+    sigma_0 = 1
+    Ql = (1 / (sigma_0) ** 2) * Kl
+    P = np.linalg.inv(Ql)  # weight matrix
+    # X parameter =[a,b]
+    # initial parameter
+    parametre_init = [X_droite[0], X_droite[1], -6.03148247, 6.25907236, 2.98826516,
+                      -3.31037008, 2.00716027, -3.89813205]
+    pc=np.asarray(parametre_init)
+
+    dxx = np.ones(len(h_))
+
+    k = 0
+    epsilon = 10e-7
+    B = np.zeros((n), dtype='double')
+    f_0 = np.zeros((n), dtype='double')
+    A = np.zeros((n, len(pc)), dtype='double')
+    while (np.any(np.abs(dxx)>epsilon) and k<=1000):
+        # closing gap matrix : B   # Evaluate closing Biasis
+        # f_0=pc[0]*(t-t[0])+pc[1]+pc[2]*np.sin(pc[3]*(t-t[0])+pc[4])+pc[5]*np.sin(pc[6]*(t-t[0])+pc[7])-1.55771433*np.sin(0.85590144*(t-t[0])-1.67033704)
+        for i in range (n):
+                    f_0[i] = pc[0] * (t[i] - t[0]) + pc[1] + pc[2] * np.sin(pc[3] * (t[i] - t[0]) + pc[4]) + pc[5] * np.sin(
+            pc[6] * (t[i] - t[0]) + pc[7])
+                    B[i] = np.asarray(h_)[i] - f_0[i]
+
+        # Jacobian matrix: A
+        for i in range (n):
+            A[i, 0] = t[i]-t[0]
+            A[i, 1] = 1
+            A[i, 2] = np.sin(pc[3]*(t[i]-t[0])+pc[4])
+            A[i, 3] = pc[2]*(t[i]-t[0])*np.cos(pc[3]*(t[i]-t[0])+pc[4])
+            A[i, 4] = pc[2]*np.cos(pc[3]*(t[i]-t[0])+pc[4])
+            A[i, 5] = np.sin(pc[6]*(t[i]-t[0])+pc[7])
+            A[i, 6] = pc[5]*(t[i]-t[0])*np.cos(pc[6]*(t[i]-t[0])+pc[7])
+            A[i, 7] = pc[5]*np.cos(pc[6]*(t[i]-t[0])+pc[7])
+
+        dxx, X_chap, Qxx, V_chap, ll, Qvv, Qll = calculation_matrix(A=A, P=P, B=B, X0=pc, Obs=l, Ql=Ql)
+        pc = X_chap
+        k+=1
+    print("pc=",pc)
+    return pc
+
 
 def calculation_matrix(A,P,B,X0,Obs,Ql):
     #dx_chap_matrix
@@ -114,12 +152,14 @@ def calculation_matrix(A,P,B,X0,Obs,Ql):
 # Displaying the initial obs, the compensated heights, the residuals,
 # the Residuals' test
 # ======================================================================
-def display(date,h_mm,X):
+def display(date,h_mm,X,pc):
     #La droite de 'estimation par MC
     #f_lastsquare_1 = X[0]*(np.asarray(date)-date[0])+X[1]
     #X = [17.68, 3960]
 
     f_lastsquare_1 = [(X[0]*(i-date[0])+X[1]) for i in np.asarray(date)]
+    f_0 = [(pc[0] * (i - date[0]) + pc[1] + pc[2] * np.sin(pc[3] * (i - date[0]) + pc[4]) + pc[5] * np.sin(
+            pc[6] * (i - date[0]) + pc[7])) for i in np.asarray(date)]
 
     fig1 = plt.figure()
     axes = fig1.add_subplot(111)
@@ -129,11 +169,12 @@ def display(date,h_mm,X):
     #plt.plot(np.array(date), np.asarray(h_mm), label='Initial Observations', color='blue',linestyle='dotted')
     axes.scatter(np.asarray(date),np.asarray(h_mm) , label='Initial dataset', s=3, color='blue')
     plt.plot(np.asarray(date), f_lastsquare_1, label='La droite par MC', color='red', linestyle='solid')
+    plt.plot(np.asarray(date), f_0, 'k')
 
 
     plt.legend(loc="best")
     axes.grid(True)
-
+    """
     fig2 = plt.figure()
     axes = fig2.add_subplot(111)
     axes.set_ylabel('Sea level data (mm)')
@@ -145,7 +186,7 @@ def display(date,h_mm,X):
 
     plt.legend(loc="best")
     axes.grid(True)
-
+    """
     plt.show()
     return
 
@@ -153,9 +194,10 @@ def display(date,h_mm,X):
 
 if __name__ == '__main__':
     date,h_mm = dataset()
-    print(date)
-    print(h_mm)
+    print("date=",date)
+    print("h_mm=",h_mm)
     X = lastsquare_1(date=date,data_mm=h_mm)
-    display(date= date,h_mm= h_mm,X= X)
+    pc = Meansquare(date=date, h_= h_mm, X_droite = X)
+    display(date= date,h_mm= h_mm,X= X,pc= pc)
 
 
