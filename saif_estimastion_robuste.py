@@ -58,24 +58,24 @@ def lastsquare_1(date,data_mm):
     P = np.linalg.inv(Ql)                               # weight matrix
     # X parameter =[a,b]
     #initial parameter
-    X = [1,1]
+    X = [0.2948, 5103]
     # closing gap matrix : B
     B =0*l
     for i in range (n):
         B[i] = l[i]- X[0]*(date_[i]-date_[0])+X[1]
 
     #Jacobian matrix: A
-    A = np.zeros((n,len(X)))
+    A = np.zeros((n,len(X)),dtype='double')
     for i in range(n):
         A[i,0] = date_[i]-date_[0]
         A[i,1] = 1
 
     dxx = calculation_matrix(A=A,P=P,B=B,X0=X,Obs=l,Ql=Ql)[0]
     K = 0
-    while any(abs(dxx) > 1e-6) and (K <= 10):
-        B = 0 * l
+    while any(abs(dxx) > 10e-7) and (K <= 100):
+        B = np.zeros((n),dtype='double')
         for i in range(n):
-            B[i] = l[i] - X[0] * (date_[i] - date_[0]) + X[1]
+            B[i] = l[i] - X[0] * (date_[i] - date_[0]) - X[1]
 
         A = np.zeros((n, len(X)))
         for i in range(n):
@@ -86,7 +86,10 @@ def lastsquare_1(date,data_mm):
         dxx,X_chap,Qxx,V_chap,ll,Qvv,Qll = calculation_matrix(A=A,P=P,B=B,X0=X,Obs=l,Ql=Ql)
         X = X_chap
         K = K + 1
-    return
+
+    print("X=",X)
+
+    return X
 
 def calculation_matrix(A,P,B,X0,Obs,Ql):
     #dx_chap_matrix
@@ -111,15 +114,38 @@ def calculation_matrix(A,P,B,X0,Obs,Ql):
 # Displaying the initial obs, the compensated heights, the residuals,
 # the Residuals' test
 # ======================================================================
-def display(date,h_mm):
+def display(date,h_mm,X):
+    #La droite de 'estimation par MC
+    #f_lastsquare_1 = X[0]*(np.asarray(date)-date[0])+X[1]
+    #X = [17.68, 3960]
+
+    f_lastsquare_1 = [(X[0]*(i-date[0])+X[1]) for i in np.asarray(date)]
+
     fig1 = plt.figure()
     axes = fig1.add_subplot(111)
     axes.set_ylabel('Sea level data (mm)')
     axes.set_xlabel('Date')
     axes.set_title('Le CONQUET-Monthly means ')
-    plt.plot(np.asarray(date), np.asarray(h_mm), label='Initial Observations', color='blue', linestyle='-')
-    axes.legend(loc=2)
+    #plt.plot(np.array(date), np.asarray(h_mm), label='Initial Observations', color='blue',linestyle='dotted')
+    axes.scatter(np.asarray(date),np.asarray(h_mm) , label='Initial dataset', s=3, color='blue')
+    plt.plot(np.asarray(date), f_lastsquare_1, label='La droite par MC', color='red', linestyle='solid')
+
+
+    plt.legend(loc="best")
     axes.grid(True)
+
+    fig2 = plt.figure()
+    axes = fig2.add_subplot(111)
+    axes.set_ylabel('Sea level data (mm)')
+    axes.set_xlabel('Date')
+    axes.set_title('Le CONQUET-Monthly means ')
+
+    #plt.plot(np.asarray(date), f_lastsquare_1, label='La droite par MC', color='red',linestyle='solid' )
+
+
+    plt.legend(loc="best")
+    axes.grid(True)
+
     plt.show()
     return
 
@@ -129,7 +155,7 @@ if __name__ == '__main__':
     date,h_mm = dataset()
     print(date)
     print(h_mm)
-    lastsquare_1(date=date,data_mm=h_mm)
-    display(date,h_mm)
+    X = lastsquare_1(date=date,data_mm=h_mm)
+    display(date= date,h_mm= h_mm,X= X)
 
 
