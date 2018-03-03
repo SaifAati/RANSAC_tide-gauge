@@ -62,7 +62,7 @@ def lastsquare_1(date,data_mm):
     # closing gap matrix : B
     B =0*l
     for i in range (n):
-        B[i] = l[i]- X[0]*(date_[i]-date_[0])+X[1]
+        B[i] = l[i]- X[0]*(date_[i]-date_[0])-X[1]
 
     #Jacobian matrix: A
     A = np.zeros((n,len(X)),dtype='double')
