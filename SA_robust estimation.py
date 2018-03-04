@@ -1,19 +1,4 @@
-"""
-The context:
-Evaluating the GLobal Mean Sea Level trend of Le CONQUET tide-gauge
-using RANSAC method
-#=======================================================================
-1. Evaluate an initial solution using only a set of obs which have the
-same number of parameters ans randomly ectracted
-#=======================================================================
-2. Continue 1 until some threshold is attained regarding the number of
-observations laying within a ceratin margin from the 1-step calculated model
-#=======================================================================
-2. If there is a model that satisfies T threshold condition,
-perform a mean square regression and stop. Else, choose among all datasets Si
-the one with the biggest size and perform a mean square analysis
-#=======================================================================
-"""
+
 #=======================================================================
 """ IMPORTS"""
 #=======================================================================
