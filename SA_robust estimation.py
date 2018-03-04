@@ -128,7 +128,50 @@ def Meansquare(date,h_,X_droite):
         k+=1
     print("pc=",pc)
     Res_norm = normalized_residuals(Residu=V_chap, P=P, obs=l, parameters=pc, Qvv=Qvv)
+
+    #print("norm.mean(Res_norm)=",norm.mean(date))
     return pc,Res_norm
+def Meansquare_Res(date,Res_norm):
+    t = np.asarray(date)
+    # stochastic model
+    l = np.asarray(Res_norm)  # observation
+    n = np.shape(l)[0]  # observation dimension
+    Kl = np.eye(n)  # matrix var/covar
+    sigma_0 = 1
+    Ql = (1 / (sigma_0) ** 2) * Kl
+    P = np.linalg.inv(Ql)  # weight matrix
+    # X parameter =[a,b,c]
+    # initial parameter
+    parametre_init = [-6.03148247, 6.25907236, 2.98826516]
+    pc=np.asarray(parametre_init)
+
+    dxx = np.ones(len(Res_norm))
+    k = 0
+    epsilon = 10e-7
+    B = np.zeros((n), dtype='double')
+    f_0 = np.zeros((n), dtype='double')
+    A = np.zeros((n, len(pc)), dtype='double')
+    while (np.any(np.abs(dxx)>epsilon) and k<=1000):
+        # closing gap matrix : B   # Evaluate closing Biasis
+
+        for i in range (n):
+                    f_0[i] = pc[0] * np.sin(pc[1] * t[i]+pc[2] )
+                    B[i] = np.asarray(Res_norm)[i] - f_0[i]
+
+        # Jacobian matrix: A
+        for i in range (n):
+            A[i, 0] = np.sin(pc[1]*t[i]+pc[2])
+            A[i, 1] = pc[0]*t[i]*np.cos(pc[1]*t[i]+pc[2])
+            A[i, 2] = pc[0]*np.cos(pc[1]*t[i]+pc[2])
+
+        dxx, X_chap, Qxx, V_chap, ll, Qvv, Qll = calculation_matrix(A=A, P=P, B=B, X0=pc, Obs=l, Ql=Ql)
+        pc = X_chap
+        k+=1
+    print("pc_res=",pc)
+    Res_norm_res = normalized_residuals(Residu=V_chap, P=P, obs=l, parameters=pc, Qvv=Qvv)
+
+
+    return pc,Res_norm_res
 
 
 def calculation_matrix(A,P,B,X0,Obs,Ql):
@@ -159,7 +202,7 @@ def normalized_residuals(Residu,P,obs,parameters,Qvv):
 # Displaying the initial obs, the compensated heights, the residuals,
 # the Residuals' test
 # ======================================================================
-def display(date,h_mm,X,pc,Res_norm,mean,sd):
+def display(date,h_mm,X,pc,Res_norm,mean,sd,pc_res,res_norm_res):
     #La droite de 'estimation par MC
     #f_lastsquare_1 = X[0]*(np.asarray(date)-date[0])+X[1]
     #X = [17.68, 3960]
@@ -183,7 +226,6 @@ def display(date,h_mm,X,pc,Res_norm,mean,sd):
     axes.grid(True)
 
 
-    #plt.plot(np.asarray(date), f_lastsquare_1, label='La droite par MC', color='red',linestyle='solid' )
     fig2=plt.figure()
     axes=fig2.add_subplot(211)
     axes.set_ylabel('Mean sea level Residuals (mm)')
@@ -191,6 +233,9 @@ def display(date,h_mm,X,pc,Res_norm,mean,sd):
     axes.set_title('Estimated Least Square Residuals(Normalized) ')
     axes.scatter(np.asarray(date),Res_norm,label='Normalized Residuals', s=10,color='blue')
     plt.plot(np.asarray(date), Res_norm, label='Interpolated Normalized Residuals', color='red', linestyle='solid',linewidth=0.5)
+    f_model_res = [(pc_res[0] * np.sin(pc_res[1] * i + pc_res[2]))  for i in np.asarray(date)]
+    plt.plot(np.asarray(date), f_model_res, label=' Estimated Least Square model forNormalized Residuals', color='green', linestyle='solid',
+             linewidth=0.5)
     plt.legend(loc="best")
     axes.grid(True)
     # =======================================================================
@@ -222,11 +267,8 @@ def display(date,h_mm,X,pc,Res_norm,mean,sd):
     plt.legend(loc="best")
     axes.grid(True)
 
-
-
     plt.show()
     return
-
 
 
 if __name__ == '__main__':
@@ -236,7 +278,10 @@ if __name__ == '__main__':
     X = lastsquare_1(date=date,data_mm=h_mm)
     pc,Res_norm = Meansquare(date=date, h_= h_mm, X_droite = X)
     mean, sd = norm.fit(Res_norm)
-    display(date= date,h_mm= h_mm,X= X,pc= pc,Res_norm= Res_norm,mean=mean,sd=sd)
+    pc_res,res_norm_res = Meansquare_Res(date = date, Res_norm = Res_norm)
+
+    display(date= date,h_mm= h_mm,X= X,pc= pc,Res_norm= Res_norm,mean=mean,sd=sd,pc_res = pc_res,
+            res_norm_res=res_norm_res)
 
 
 
