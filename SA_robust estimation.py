@@ -1,10 +1,26 @@
-
+"""
+The context:
+Evaluating the GLobal Mean Sea Level trend of Le CONQUET tide-gauge
+using RANSAC method
+#=======================================================================
+1. Evaluate an initial solution using only a set of obs which have the
+same number of parameters ans randomly ectracted
+#=======================================================================
+2. Continue 1 until some threshold is attained regarding the number of
+observations laying within a ceratin margin from the 1-step calculated model
+#=======================================================================
+2. If there is a model that satisfies T threshold condition,
+perform a mean square regression and stop. Else, choose among all datasets Si
+the one with the biggest size and perform a mean square analysis
+#=======================================================================
+"""
 #=======================================================================
 """ IMPORTS"""
 #=======================================================================
 import os
 import numpy as np
 import matplotlib.pylab as plt
+from scipy.stats import norm
 
 #===========================Loading Data=================================
 def dataset():
@@ -93,7 +109,7 @@ def Meansquare(date,h_,X_droite):
         # f_0=pc[0]*(t-t[0])+pc[1]+pc[2]*np.sin(pc[3]*(t-t[0])+pc[4])+pc[5]*np.sin(pc[6]*(t-t[0])+pc[7])-1.55771433*np.sin(0.85590144*(t-t[0])-1.67033704)
         for i in range (n):
                     f_0[i] = pc[0] * (t[i] - t[0]) + pc[1] + pc[2] * np.sin(pc[3] * (t[i] - t[0]) + pc[4]) + pc[5] * np.sin(
-            pc[6] * (t[i] - t[0]) + pc[7])
+            pc[6] * (t[i] - t[0]) + pc[7])-1.55771433*np.sin(0.85590144*(t[i]-t[0])-1.67033704)
                     B[i] = np.asarray(h_)[i] - f_0[i]
 
         # Jacobian matrix: A
@@ -111,7 +127,8 @@ def Meansquare(date,h_,X_droite):
         pc = X_chap
         k+=1
     print("pc=",pc)
-    return pc
+    Res_norm = normalized_residuals(Residu=V_chap, P=P, obs=l, parameters=pc, Qvv=Qvv)
+    return pc,Res_norm
 
 
 def calculation_matrix(A,P,B,X0,Obs,Ql):
@@ -133,45 +150,67 @@ def calculation_matrix(A,P,B,X0,Obs,Ql):
 
     return (dx_chap,x_chap,Qxx,V_chap,l_chapeau,Qvv,Qll)
 
+def normalized_residuals(Residu,P,obs,parameters,Qvv):
+    Sigma_chp_square = Residu.T.dot(P.dot(Residu)) / (len(obs) - len(parameters))
+    Res_norm = Residu / np.sqrt(Sigma_chp_square * Qvv.diagonal())
+    return Res_norm
+
 # ======================================================================
 # Displaying the initial obs, the compensated heights, the residuals,
 # the Residuals' test
 # ======================================================================
-def display(date,h_mm,X,pc):
+def display(date,h_mm,X,pc,Res_norm,mean,sd):
     #La droite de 'estimation par MC
     #f_lastsquare_1 = X[0]*(np.asarray(date)-date[0])+X[1]
     #X = [17.68, 3960]
 
     f_lastsquare_1 = [(X[0]*(i-date[0])+X[1]) for i in np.asarray(date)]
     f_0 = [(pc[0] * (i - date[0]) + pc[1] + pc[2] * np.sin(pc[3] * (i - date[0]) + pc[4]) + pc[5] * np.sin(
-            pc[6] * (i - date[0]) + pc[7])) for i in np.asarray(date)]
+            pc[6] * (i - date[0]) + pc[7])-1.55771433*np.sin(0.85590144*(i-date[0])-1.67033704)) for i in np.asarray(date)]
 
     fig1 = plt.figure()
     axes = fig1.add_subplot(111)
-    axes.set_ylabel('Sea level data (mm)')
+    axes.set_ylabel('Mean sea level (mm)')
     axes.set_xlabel('Date')
     axes.set_title('Le CONQUET-Monthly means ')
     #plt.plot(np.array(date), np.asarray(h_mm), label='Initial Observations', color='blue',linestyle='dotted')
     axes.scatter(np.asarray(date),np.asarray(h_mm) , label='Initial dataset', s=3, color='blue')
-    plt.plot(np.asarray(date), f_lastsquare_1, label='La droite par MC', color='red', linestyle='solid')
-    plt.plot(np.asarray(date), f_0, 'k')
-
+    plt.plot(np.asarray(date), np.asarray(h_mm), label='Interpolated Data', color='green', linestyle='solid',linewidth=0.3)
+    plt.plot(np.asarray(date), f_lastsquare_1, label='Least square polynom1', color='red', linestyle='solid',linewidth=0.5)
+    plt.plot(np.asarray(date), f_0, color= 'k',label='Least square model',linestyle = 'solid',linewidth=1)
 
     plt.legend(loc="best")
     axes.grid(True)
-    """
-    fig2 = plt.figure()
-    axes = fig2.add_subplot(111)
-    axes.set_ylabel('Sea level data (mm)')
-    axes.set_xlabel('Date')
-    axes.set_title('Le CONQUET-Monthly means ')
+
 
     #plt.plot(np.asarray(date), f_lastsquare_1, label='La droite par MC', color='red',linestyle='solid' )
+    fig2=plt.figure()
+    axes=fig2.add_subplot(111)
+    axes.set_ylabel('Mean sea level Residuals (mm)')
+    axes.set_xlabel('Date')
+    axes.set_title('Estimated Least Square Residuals(Normalized) ')
+    axes.scatter(np.asarray(date),Res_norm,label='Normalized Residuals', s=10,color='blue')
+    plt.plot(np.asarray(date), Res_norm, label='Interpolated Normalized Residuals', color='red', linestyle='solid')
+    plt.legend(loc="best")
 
 
+    fig3 = plt.figure()
+    axes = fig3.add_subplot(111)
+    # =======================================================================
+    """Check if normalized residuals follow normal Gaussian distribtuion
+    of: mean=0 and Standard deviation=1"""
+    # ===================================================================
+    # Plotting data histogram
+    axes.hist(Res_norm, bins=25, normed=True, alpha=0.6, color='b')
+    # Plotting the Normal distribution
+    xmin, xmax = plt.xlim()
+    x = np.linspace(xmin, xmax, 100)
+    p = norm.pdf(x, loc= mean, scale= sd)
+    plt.plot(x, p, 'k', linewidth=2)
+    title = "Fit results: mean = %.2f,  std = %.2f" % (mean, sd)
+    axes.set_title(title)
     plt.legend(loc="best")
     axes.grid(True)
-    """
     plt.show()
     return
 
@@ -182,7 +221,12 @@ if __name__ == '__main__':
     print("date=",date)
     print("h_mm=",h_mm)
     X = lastsquare_1(date=date,data_mm=h_mm)
-    pc = Meansquare(date=date, h_= h_mm, X_droite = X)
-    display(date= date,h_mm= h_mm,X= X,pc= pc)
+    pc,Res_norm = Meansquare(date=date, h_= h_mm, X_droite = X)
+    mean, sd = norm.fit(Res_norm)
+    display(date= date,h_mm= h_mm,X= X,pc= pc,Res_norm= Res_norm,mean=mean,sd=sd)
+
+
+
+
 
 
