@@ -185,14 +185,24 @@ def display(date,h_mm,X,pc,Res_norm,mean,sd):
 
     #plt.plot(np.asarray(date), f_lastsquare_1, label='La droite par MC', color='red',linestyle='solid' )
     fig2=plt.figure()
-    axes=fig2.add_subplot(111)
+    axes=fig2.add_subplot(211)
     axes.set_ylabel('Mean sea level Residuals (mm)')
     axes.set_xlabel('Date')
     axes.set_title('Estimated Least Square Residuals(Normalized) ')
     axes.scatter(np.asarray(date),Res_norm,label='Normalized Residuals', s=10,color='blue')
-    plt.plot(np.asarray(date), Res_norm, label='Interpolated Normalized Residuals', color='red', linestyle='solid')
+    plt.plot(np.asarray(date), Res_norm, label='Interpolated Normalized Residuals', color='red', linestyle='solid',linewidth=0.5)
     plt.legend(loc="best")
-
+    axes.grid(True)
+    # =======================================================================
+    """FFT of  normalized residuals"""
+    # ===================================================================
+    axes = fig2.add_subplot(212)
+    aa = np.fft.fft(Res_norm)
+    freq = np.fft.fftfreq(np.size(Res_norm), d=0.1)
+    f = np.fft.fftshift(freq)
+    plt.plot(f, np.real(aa),linewidth=0.5)
+    plt.legend(loc="best")
+    axes.grid(True)
 
     fig3 = plt.figure()
     axes = fig3.add_subplot(111)
@@ -201,7 +211,7 @@ def display(date,h_mm,X,pc,Res_norm,mean,sd):
     of: mean=0 and Standard deviation=1"""
     # ===================================================================
     # Plotting data histogram
-    axes.hist(Res_norm, bins=25, normed=True, alpha=0.6, color='b')
+    axes.hist(Res_norm, bins=25, normed=True, alpha=0.5, color='b')
     # Plotting the Normal distribution
     xmin, xmax = plt.xlim()
     x = np.linspace(xmin, xmax, 100)
@@ -211,6 +221,9 @@ def display(date,h_mm,X,pc,Res_norm,mean,sd):
     axes.set_title(title)
     plt.legend(loc="best")
     axes.grid(True)
+
+
+
     plt.show()
     return
 
