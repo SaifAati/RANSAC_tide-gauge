@@ -177,7 +177,7 @@ def Meansquare_Res(date,Res_norm):
     Res_norm_res = normalized_residuals(Residu=V_chap, P=P, obs=l, parameters=pc, Qvv=Qvv)
 
     return pc,Res_norm_res
-def Meansquare_norm(date,h_,X_droite):
+def Meansquare_norm(date,h_,X_droite,pc_res):
     t = np.asarray(date)
     # stochastic model
     l = np.asarray(h_)  # observation
@@ -204,7 +204,7 @@ def Meansquare_norm(date,h_,X_droite):
         # f_0=pc[0]*(t-t[0])+pc[1]+pc[2]*np.sin(pc[3]*(t-t[0])+pc[4])+pc[5]*np.sin(pc[6]*(t-t[0])+pc[7])-1.55771433*np.sin(0.85590144*(t-t[0])-1.67033704)
         for i in range (n):
                     f_0[i] = pc[0] * (t[i] - t[0]) + pc[1] + pc[2] * np.sin(pc[3] * (t[i] - t[0]) + pc[4]) + pc[5] * np.sin(
-            pc[6] * (t[i] - t[0]) + pc[7])-(-3.18138013e-01 * np.sin(1.04833560 * (t[i] - date[0]) - 3.85657519e+02))
+            pc[6] * (t[i] - t[0]) + pc[7])-(pc_res[0] * np.sin(pc_res[1] * (t[i] - date[0]) +pc_res[2]))
                     B[i] = np.asarray(h_)[i] - f_0[i]
 
         # Jacobian matrix: A
@@ -256,10 +256,10 @@ def normalized_residuals(Residu,P,obs,parameters,Qvv):
 # Displaying the initial obs, the compensated heights, the residuals,
 # the Residuals' test
 # ======================================================================
-def display(date,h_mm,X,pc,
-            Res_norm,mean,sd,
-            pc_res,res_norm_res,
-            pc_final,Res_norm_final,mean_final,sd_final):
+def display(date,h_mm,X,
+            pc,Res_norm,mean,sd,
+            pc_final1, Res_norm_final1, mean_final1, sd_final1,pc_res1,
+            pc_final,Res_norm_final,mean_final,sd_final,pc_res_final):
     #La droite de 'estimation par MC
     #f_lastsquare_1 = X[0]*(np.asarray(date)-date[0])+X[1]
     #X = [17.68, 3960]
@@ -278,10 +278,8 @@ def display(date,h_mm,X,pc,
     plt.plot(np.asarray(date), np.asarray(h_mm), label='Interpolated Data', color='green', linestyle='solid',linewidth=0.3)
     plt.plot(np.asarray(date), f_lastsquare_1, label='Least square polynom1', color='red', linestyle='solid',linewidth=0.5)
     plt.plot(np.asarray(date), f_0, color= 'k',label='Least square model',linestyle = 'solid',linewidth=1)
-
     plt.legend(loc="best")
     axes.grid(True)
-
 
     fig2=plt.figure()
     axes=fig2.add_subplot(211)
@@ -290,10 +288,12 @@ def display(date,h_mm,X,pc,
     axes.set_title('Estimated Least Square Residuals(Normalized) ')
     axes.scatter(np.asarray(date),Res_norm,label='Normalized Residuals', s=10,color='blue')
     plt.plot(np.asarray(date), Res_norm, label='Interpolated Normalized Residuals', color='red', linestyle='solid',linewidth=0.5)
-    f_model_res = [(pc_res[0] * np.sin(pc_res[1] * (i - date[0]) + pc_res[2]))  for i in np.asarray(date)]
+
+    #model for redisu
+    f_model_res = [(pc_res1[0] * np.sin(pc_res1[1] * (i - date[0]) + pc_res1[2]))  for i in np.asarray(date)]
     #f_model_res = [(1.55771433 * np.sin(0.85590144 * (i - date[0]) - 1.67033704)) for i in np.asarray(date)]
-    plt.plot(np.asarray(date), f_model_res, label=' Estimated Least Square model forNormalized Residuals', color='green', linestyle='solid',
-             linewidth=0.5)
+    plt.plot(np.asarray(date), f_model_res, label=' Estimated Least Square model forNormalized Residuals1',
+             color='green', linestyle='solid',linewidth=0.5)
     plt.legend(loc="best")
     axes.grid(True)
     # =======================================================================
@@ -307,12 +307,12 @@ def display(date,h_mm,X,pc,
     plt.legend(loc="best")
     axes.grid(True)
 
-    fig3 = plt.figure()
-    axes = fig3.add_subplot(111)
     # =======================================================================
     """Check if normalized residuals follow normal Gaussian distribtuion
     of: mean=0 and Standard deviation=1"""
     # ===================================================================
+    fig3 = plt.figure()
+    axes = fig3.add_subplot(111)
     # Plotting data histogram
     axes.hist(Res_norm, bins=25, normed=True, alpha=0.5, color='b')
     # Plotting the Normal distribution
@@ -325,10 +325,13 @@ def display(date,h_mm,X,pc,
     plt.legend(loc="best")
     axes.grid(True)
 
-    f_0_final = [(pc_final[0] * (i - date[0]) + pc_final[1]+
-                  pc_final[2] * np.sin(pc_final[3] * (i - date[0])+pc_final[4]) +
-                  pc_final[5] * np.sin(pc_final[6] * (i - date[0]) + pc_final[7])-
-                  (-3.18138013e-01 * np.sin(1.04833560 * (i - date[0]) - 3.85657519e+02)))
+
+    # After first normalization
+
+    f_0_final1 = [(pc_final1[0] * (i - date[0]) + pc_final1[1]+
+                  pc_final1[2] * np.sin(pc_final1[3] * (i - date[0])+pc_final1[4]) +
+                  pc_final1[5] * np.sin(pc_final1[6] * (i - date[0]) + pc_final1[7])-
+                  (pc_res1[0] * np.sin(pc_res1[1] * (i - date[0]) +pc_res1[2])))
                   for i in np.asarray(date)]
 
     fig4 = plt.figure()
@@ -341,18 +344,37 @@ def display(date,h_mm,X,pc,
              linewidth=0.3)
     plt.plot(np.asarray(date), f_lastsquare_1, label='Least square polynom1', color='red', linestyle='solid',
              linewidth=0.5)
-    plt.plot(np.asarray(date), f_0_final, color='k', label='Least square final model', linestyle='solid', linewidth=1)
+    plt.plot(np.asarray(date), f_0_final1, color='k', label='Least square final model', linestyle='solid', linewidth=1)
     plt.legend(loc="best")
+
     axes.grid(True)
+
 
     fig5 = plt.figure()
     axes = fig5.add_subplot(111)
     axes.set_ylabel('Mean sea level Final Residuals (mm)')
     axes.set_xlabel('Date')
     axes.set_title('Estimated Final Least Square Residuals(Normalized) ')
-    axes.scatter(np.asarray(date), Res_norm_final, label='Normalized Residuals', s=10, color='blue')
-    plt.plot(np.asarray(date), Res_norm_final, label='Interpolated Normalized Residuals', color='red', linestyle='solid',
+    axes.scatter(np.asarray(date), Res_norm_final1, label='Normalized Residuals', s=10, color='blue')
+    plt.plot(np.asarray(date), Res_norm_final1, label='Interpolated Normalized Residuals', color='red', linestyle='solid',
              linewidth=0.5)
+    plt.legend(loc="best")
+    # model for redisu
+    f_model_res = [(pc_res1[0] * np.sin(pc_res1[1] * (i - date[0]) + pc_res1[2])) for i in np.asarray(date)]
+    # f_model_res = [(1.55771433 * np.sin(0.85590144 * (i - date[0]) - 1.67033704)) for i in np.asarray(date)]
+    plt.plot(np.asarray(date), f_model_res, label=' Estimated Least Square model forNormalized Residuals1',
+             color='green', linestyle='solid', linewidth=0.5)
+    plt.legend(loc="best")
+
+    axes.grid(True)
+    # =======================================================================
+    """FFT of normalized residuals"""
+    # ===================================================================
+    axes = fig5.add_subplot(212)
+    tf_res_norm = np.fft.fft(Res_norm_final1)
+    freq = np.fft.fftfreq(np.size(Res_norm_final1), d=0.4)
+    f = np.fft.fftshift(freq)
+    plt.plot(f, np.real(tf_res_norm), linewidth=0.5)
     plt.legend(loc="best")
     axes.grid(True)
 
@@ -363,6 +385,74 @@ def display(date,h_mm,X,pc,
     # ===================================================================
     fig6 = plt.figure()
     axes = fig6.add_subplot(111)
+    # Plotting data histogram
+    axes.hist(Res_norm_final1, bins=25, normed=True, alpha=0.5, color='b')
+    # Plotting the Normal distribution
+    xmin, xmax = plt.xlim()
+    x = np.linspace(xmin, xmax, 100)
+    p_final1 = norm.pdf(x, loc=mean_final1, scale=sd_final1)
+    plt.plot(x, p_final1, 'k', linewidth=2)
+    title = "Final Fit results: mean = %.2f,  std = %.2f" % (mean_final1, sd_final1)
+    axes.set_title(title)
+    axes.grid(True)
+
+    # Final results (after iteration)
+
+    f_0_final = [(pc_final[0] * (i - date[0]) + pc_final[1] +
+                   pc_final[2] * np.sin(pc_final[3] * (i - date[0]) + pc_final[4]) +
+                   pc_final[5] * np.sin(pc_final[6] * (i - date[0]) + pc_final[7]) -
+                   (pc_res_final[0] * np.sin(pc_res_final[1] * (i - date[0]) + pc_res_final[2])))
+                  for i in np.asarray(date)]
+
+    fig7 = plt.figure()
+    axes = fig7.add_subplot(111)
+    axes.set_ylabel('Mean sea level (mm)')
+    axes.set_xlabel('Date')
+    axes.set_title('Le CONQUET-Monthly means ')
+    axes.scatter(np.asarray(date), np.asarray(h_mm), label='Initial dataset', s=3, color='blue')
+    plt.plot(np.asarray(date), np.asarray(h_mm), label='Interpolated Data', color='green', linestyle='solid',
+             linewidth=0.3)
+    plt.plot(np.asarray(date), f_lastsquare_1, label='Least square polynom1', color='red', linestyle='solid',
+             linewidth=0.5)
+    plt.plot(np.asarray(date), f_0_final, color='k', label='Least square final model', linestyle='solid', linewidth=1)
+    plt.legend(loc="best")
+    axes.grid(True)
+
+    fig8 = plt.figure()
+    axes = fig8.add_subplot(211)
+    axes.set_ylabel('Mean sea level Final Residuals (mm)')
+    axes.set_xlabel('Date')
+    axes.set_title('Estimated Final Least Square Residuals(Normalized) ')
+    axes.scatter(np.asarray(date), Res_norm_final, label='Normalized Residuals', s=10, color='blue')
+    plt.plot(np.asarray(date), Res_norm_final, label='Interpolated Normalized Residuals', color='red',
+             linestyle='solid',
+             linewidth=0.5)
+
+    # model for redisu
+    f_model_res = [(pc_res_final[0] * np.sin(pc_res_final[1] * (i - date[0]) + pc_res_final[2])) for i in
+                   np.asarray(date)]
+    # f_model_res = [(1.55771433 * np.sin(0.85590144 * (i - date[0]) - 1.67033704)) for i in np.asarray(date)]
+    plt.plot(np.asarray(date), f_model_res, label=' Estimated Least Square model forNormalized Residuals',
+             color='green', linestyle='solid', linewidth=0.5)
+    plt.legend(loc="best")
+    axes.grid(True)
+    # =======================================================================
+    """FFT of normalized residuals"""
+    # ===================================================================
+    axes = fig8.add_subplot(212)
+    tf_res_norm = np.fft.fft(Res_norm_final)
+    freq = np.fft.fftfreq(np.size(Res_norm_final), d=0.4)
+    f = np.fft.fftshift(freq)
+    plt.plot(f, np.real(tf_res_norm), linewidth=0.5)
+    plt.legend(loc="best")
+    axes.grid(True)
+
+    # =======================================================================
+    """Check if normalized residuals follow normal Gaussian distribtuion
+    of: mean=0 and Standard deviation=1"""
+    # ===================================================================
+    fig9 = plt.figure()
+    axes = fig9.add_subplot(111)
     # Plotting data histogram
     axes.hist(Res_norm_final, bins=25, normed=True, alpha=0.5, color='b')
     # Plotting the Normal distribution
@@ -384,18 +474,27 @@ if __name__ == '__main__':
     print("date=",date)
     print("h_mm=",h_mm)
     X = lastsquare_1(date=date,data_mm=h_mm)
-
     pc,Res_norm = Meansquare(date=date, h_= h_mm, X_droite = X)
     mean, sd = norm.fit(Res_norm)
-    pc_res,res_norm_res = Meansquare_Res(date = date, Res_norm = Res_norm)
+    #model for residual
+    pc_res1, res_norm_res1 = Meansquare_Res(date=date, Res_norm=Res_norm)
+    pc_final1, Res_norm_final1 = Meansquare_norm(date=date, h_=h_mm, X_droite=X, pc_res=pc_res1)
+    mean_final1, sd_final1 = norm.fit(Res_norm_final1)
 
-    pc_final,Res_norm_final = Meansquare_norm(date=date, h_= h_mm, X_droite=X)
+    for j in range (4):
+        pc_res,res_norm_res = Meansquare_Res(date = date, Res_norm = Res_norm)
+        pc_final,Res_norm_final = Meansquare_norm(date=date, h_= h_mm, X_droite=X,pc_res=pc_res)
+        Res_norm = Res_norm_final
+        print("step%d"%j)
+
     mean_final, sd_final = norm.fit(Res_norm_final)
 
     display(date= date,h_mm= h_mm,X= X,
             pc= pc,Res_norm= Res_norm,mean=mean,sd=sd,
-            pc_res = pc_res,res_norm_res=res_norm_res,
-            pc_final=pc_final,Res_norm_final=Res_norm_final,mean_final=mean_final,sd_final=sd_final)
+            pc_final1=pc_final1, Res_norm_final1=Res_norm_final1, mean_final1=mean_final1, sd_final1=sd_final1,pc_res1=pc_res1,
+            pc_final=pc_final,Res_norm_final=Res_norm_final,mean_final=mean_final,sd_final=sd_final,pc_res_final=pc_res)
+
+
 
 
 
