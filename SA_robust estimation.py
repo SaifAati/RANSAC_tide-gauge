@@ -135,12 +135,12 @@ def Meansquare(date,h_,X_droite):
     Res_norm = normalized_residuals(Residu=V_chap, P=P, obs=l, parameters=pc, Qvv=Qvv)
 
     #print("norm.mean(Res_norm)=",norm.mean(date))
-    return pc,Res_norm
+    return pc,Res_norm,V_chap
 
-def Meansquare_Res(date,Res_norm):
+def Meansquare_Res(date,Res_):
     t = np.asarray(date)
     # stochastic model
-    l = np.asarray(Res_norm)  # observation
+    l = np.asarray(Res_)  # observation
     n = np.shape(l)[0]  # observation dimension
     Kl = np.eye(n)  # matrix var/covar
     sigma_0 = 1
@@ -151,7 +151,7 @@ def Meansquare_Res(date,Res_norm):
     parametre_init = [1.55771433, 0.85590144, -1.67033704]
     pc=np.asarray(parametre_init)
 
-    dxx = np.ones(len(Res_norm))
+    dxx = np.ones(len(Res_))
     k = 0
     epsilon = 10e-7
     B = np.zeros((n), dtype='double')
@@ -162,7 +162,7 @@ def Meansquare_Res(date,Res_norm):
 
         for i in range (n):
                     f_0[i] = pc[0] * np.sin(pc[1] * (t[i]-t[0])-pc[2] )
-                    B[i] = np.asarray(Res_norm)[i] - f_0[i]
+                    B[i] = np.asarray(Res_)[i] - f_0[i]
 
         # Jacobian matrix: A
         for i in range (n):
@@ -175,8 +175,8 @@ def Meansquare_Res(date,Res_norm):
         k+=1
     print("pc_res=",pc)
     Res_norm_res = normalized_residuals(Residu=V_chap, P=P, obs=l, parameters=pc, Qvv=Qvv)
-
-    return pc,Res_norm_res
+    Res_Res = V_chap
+    return pc,Res_norm_res,Res_Res
 def Meansquare_norm(date,h_,X_droite,pc_res):
     t = np.asarray(date)
     # stochastic model
@@ -226,7 +226,7 @@ def Meansquare_norm(date,h_,X_droite,pc_res):
     Res_norm_final = normalized_residuals(Residu=V_chap, P=P, obs=l, parameters=pc, Qvv=Qvv)
 
     #print("norm.mean(Res_norm)=",norm.mean(date))
-    return pc_final,Res_norm_final
+    return pc_final,Res_norm_final,V_chap
 
 def calculation_matrix(A,P,B,X0,Obs,Ql):
     #dx_chap_matrix
@@ -474,16 +474,17 @@ if __name__ == '__main__':
     print("date=",date)
     print("h_mm=",h_mm)
     X = lastsquare_1(date=date,data_mm=h_mm)
-    pc,Res_norm = Meansquare(date=date, h_= h_mm, X_droite = X)
+    pc,Res_norm,Res = Meansquare(date=date, h_= h_mm, X_droite = X)
+    print("Res=",Res)
     mean, sd = norm.fit(Res_norm)
     #model for residual
-    pc_res1, res_norm_res1 = Meansquare_Res(date=date, Res_norm=Res_norm)
-    pc_final1, Res_norm_final1 = Meansquare_norm(date=date, h_=h_mm, X_droite=X, pc_res=pc_res1)
+    pc_res1, res_norm_res1,Res_res = Meansquare_Res(date=date,Res_=Res)
+    pc_final1, Res_norm_final1,Res_final1 = Meansquare_norm(date=date, h_=h_mm, X_droite=X, pc_res=pc_res1)
     mean_final1, sd_final1 = norm.fit(Res_norm_final1)
 
     for j in range (4):
-        pc_res,res_norm_res = Meansquare_Res(date = date, Res_norm = Res_norm)
-        pc_final,Res_norm_final = Meansquare_norm(date=date, h_= h_mm, X_droite=X,pc_res=pc_res)
+        pc_res,res_norm_res,Res_res = Meansquare_Res(date = date, Res_ = Res)
+        pc_final,Res_norm_final,Res_final = Meansquare_norm(date=date, h_= h_mm, X_droite=X,pc_res=pc_res)
         Res_norm = Res_norm_final
         print("step%d"%j)
 
