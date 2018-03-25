@@ -253,8 +253,8 @@ if __name__ == '__main__':
     # Determine the set of points S  that are in agreement with the model at a threshold
     # t=ransac_threshold fixed.
     # S called the sample consensus game ("good" S points).
-    ransac_threshold = 80   # fixed threshold (t mm)
-    ransac_ratio = 0.85  # ratio of inliers required to assert that 85%
+    ransac_threshold = 400   # fixed threshold (t mm)
+    ransac_ratio = 0.90  # ratio of inliers required to assert that 85%
     ratio = 0.65   # verification threshold of consensus points (minimum 114 points)
 
     # Best Model
