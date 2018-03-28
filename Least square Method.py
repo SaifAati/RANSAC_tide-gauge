@@ -106,7 +106,7 @@ def LeastSquareForModelDesign(date, h_, X_droite):
     # a=stat.mean(date) #période caractéristique
     a = t[0]
     while (np.any(np.abs(dxx) > epsilon) and k <= 100):
-        print("MC1=", k)
+
         # closing gap matrix : B   # Evaluate closing Biasis
         # f_0=pc[0]*(t-t[0])+pc[1]+pc[2]*np.sin(pc[3]*(t-t[0])+pc[4])+pc[5]*np.sin(pc[6]*(t-t[0])+pc[7])-1.55771433*np.sin(0.85590144*(t-t[0])-1.67033704)-pc_res[0] * np.sin(pc_res[1] * (t[i] - date[0]) +pc_res[2])
         for i in range(n):
@@ -142,11 +142,11 @@ def LeastSquareForModelDesign(date, h_, X_droite):
 
 def FinalLeastSquare(date, h_, X_droite, sigma):
     t = np.asarray(date)
-    print(np.shape(date))
+
     # stochastic model
     l = np.asarray(h_)  # observation
     n = np.shape(l)[0]  # observation dimension
-    print("n=",n)
+
     Kl = np.eye(n)  # matrix var/covar
     #sigma_0 = 1
     sigma_0 = sigma
@@ -205,7 +205,6 @@ def FinalLeastSquare(date, h_, X_droite, sigma):
     pc_final = pc
     Res_norm_final,Sigma_chp_square = NormalizedResidues(Residu=V_chap, P=P, obs=l, parameters=pc, Qvv=Qvv)
 
-    #print("norm.mean(Res_norm)=",norm.mean(date))
 
     return pc_final,Res_norm_final,V_chap,ll,np.sqrt(Sigma_chp_square)
 
@@ -309,20 +308,26 @@ def Test3Sigma(date, h_mm, X_droite):
     for j in range(5):
 
         print("\n\nStep", j)
-        pc_final, Res_norm_final, Res_final, h_mm_compen, Sigma_chap_final = FinalLeastSquare(date=date, h_=h_mm,
-                                                                                                 X_droite=X_droite, sigma=sigma0)
+        #MC1
+        #pc, Res_norm, Res, Qll, sigma_chap1, Qvv = LeastSquareForModelDesign(date=date, h_=h_mm,
+                                                                             #X_droite=X_droite)
+        #MC2
+
+        pc_final, Res_norm_final, Res_final, h_mm_compen, Sigma_chap_final = FinalLeastSquare( date=date, h_=h_mm,
+                                                                            X_droite=X_droite, sigma=sigma0)
         print("Sigma_chap", Sigma_chap_final)
         print("Parameters", pc_final)
         print("Res_norm max", np.max(Res_norm_final))
 
         mu, std = norm.fit(Res_norm_final)
 
+
         # Condition The Residues by the Sigma Test  to get some outliers
         indices = []
         new_h_mm = []
         new_date =[]
         number=0
-        for i in range(len(Res_final)):
+        for i in range(len(Res)):
             if (np.abs(Res_norm_final[i]) < 3 * std):
                 number +=1
                 new_date.append(date[i])
@@ -358,7 +363,8 @@ def Display(date, h_mm, X, pc, Res_norm, Res, mean, sd, pc_final1, Res_norm_fina
     axes.scatter(np.asarray(date),np.asarray(h_mm) , label='Initial dataset', s=3, color='blue')
     plt.plot(np.asarray(date), np.asarray(h_mm), label='Interpolated Data', color='green', linestyle='solid',linewidth=0.3)
     plt.plot(np.asarray(date), Line_model, label='Least square polynom1', color='red', linestyle='solid',linewidth=0.5)
-    plt.plot(np.asarray(date), Model_1, color= 'k',label='Least square model 1',linestyle = 'solid',linewidth=1)
+    plt.plot(np.asarray(date), Model_1, color= 'k',label='Least square model 1',linestyle =
+         'solid',linewidth=1)
     plt.legend(loc="best")
     axes.grid(True)
     # ******************************  Display 2 ******************************************#
@@ -377,7 +383,7 @@ def Display(date, h_mm, X, pc, Res_norm, Res, mean, sd, pc_final1, Res_norm_fina
 
     N = np.shape(date)[0]
     print("N=",N)
-    signal_freq, signal_FFT = FFTFunction(signal=Res, Date=np.asarray(date), N =N)
+    signal_freq, signal_FFT = FFTFunction(signal=Res_norm, Date=np.asarray(date), N =N)
 
     axes = fig2.add_subplot(212)
     plt.plot(N*signal_freq, signal_FFT,linewidth=0.5)
@@ -459,19 +465,23 @@ def Display(date, h_mm, X, pc, Res_norm, Res, mean, sd, pc_final1, Res_norm_fina
 if __name__ == '__main__':
 
     # Load data
+    print("  Data \n")
     date,h_mm = dataset()
     print("date=",date)
     print("h_mm=",h_mm)
 
     # Least_square for line fit
+    print("\n Least_square for line fit\n")
     X = LeastSquareLineFit(date=date, data_mm=h_mm)
 
-    # Least square first model = 3 sin + line
+    # Least square first model = 3 sin + line (MC1)
+    print("\nLeast square first model\n")
     pc,Res_norm,Res,Qll,sigma_chap1,Qvv = LeastSquareForModelDesign(date=date, h_= h_mm, X_droite = X)
     print("Sigma_chap1=",sigma_chap1)
     mean, sd = norm.fit(Res_norm)
 
-    # Least squareFinal Model
+    # Least squareFinal Model (MC2)
+    print("\n Least squareFinal Model (MC2)\n")
     pc_final1, Res_norm_final1,Res_final1,h_mm_compen,Sigma_chap_final = FinalLeastSquare(date=date, h_=h_mm, X_droite=X, sigma=1)
     mean_final1, sd_final1 = norm.fit(Res_norm_final1)
     print("pc_final1=",pc_final1)
@@ -483,5 +493,5 @@ if __name__ == '__main__':
             pc= pc, Res_norm= Res_norm, Res=Res, mean=mean, sd=sd,
             pc_final1=pc_final1, Res_norm_final1=Res_norm_final1, mean_final1=mean_final1, sd_final1=sd_final1, h_mm_compen=h_mm_compen)
 
-
+    print("\n  Test 3 sigma ")
     Test3Sigma(date=date, h_mm=h_mm, X_droite=X)
