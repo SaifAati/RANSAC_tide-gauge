@@ -63,7 +63,7 @@ def SolveModelFunction(parameters):
     #print("fsolve=",pc)
     return pc
 
-def Least_square_method(date_,h_,parameters):
+def LeastSquareMethod(date_, h_, parameters):
     t = np.asarray(date_)
     # stochastic model
     l = np.asarray(h_)  # observation
@@ -150,7 +150,8 @@ def RansacPlot(it_, date_, h_mm_, parameters_, date_inliers_, h_inliers_, maybe_
         # To present final results
         line_color = '#ff0000'   #Red color (Color Hex)
         title = 'Final solution'
-        plt.plot(date_inliers_, h_inliers_, marker='+', label='Consensus_point', linestyle='None', color='#0F0D0E', alpha=0.8)
+        plt.plot(date_inliers_, h_inliers_, marker='+', label='Consensus_point',
+                 linestyle='None', color='#0F0D0E', alpha=1)
 
 
     plt.figure(1)
@@ -307,7 +308,7 @@ def RansacMethod(ransac_iterations,ransac_threshold,ransac_ratio,ratio):
         #  pick up n random points
         # ========================================================
         global n
-        n = 21
+        n = 15
         maybe_points, test_points = RandomPoints(n)
 
         # ===============================================================
@@ -320,8 +321,8 @@ def RansacMethod(ransac_iterations,ransac_threshold,ransac_ratio,ratio):
         if (n > 11):
             date_ = maybe_points[:, 0]
             h_mm_ = maybe_points[:, 1]
-            pc, Res_norm, V_chap, Sigma_chp_square = Least_square_method(date_=date_, h_=h_mm_,
-                                                                         parameters=ini_parameters)
+            pc, Res_norm, V_chap, Sigma_chp_square = LeastSquareMethod(date_=date_, h_=h_mm_,
+                                                                       parameters=ini_parameters)
             possible_parameters = pc
 
         # Coordinates of consensus points (inlier points)
@@ -375,7 +376,7 @@ def RansacMethod(ransac_iterations,ransac_threshold,ransac_ratio,ratio):
             print(" The new inlier ratio = ", ratio)
             # we adjust the model at all points of the consensus (inlier points)
             # we apply an estimation by the least square method
-            updated_parameters, Res_norm, V_chap, sigma_chap = Least_square_method(
+            updated_parameters, Res_norm, V_chap, sigma_chap = LeastSquareMethod(
                 date_=date_inliers_consensus, h_=h_inliers_consensus, parameters=possible_parameters)
             ini_parameters = updated_parameters
             max_points = num
@@ -431,14 +432,14 @@ if __name__ == '__main__':
 
 
     # Ransac parameters
-    ransac_iterations = 28  # number of iterations
+    ransac_iterations = 27  # number of iterations
     #====================================================================================
     # Determine the set of points S  that are in agreement with the model at a threshold
     # t=ransac_threshold fixed.
     # S called the sample consensus game ("good" S points).
     # ====================================================================================
     ransac_threshold = 200  # fixed threshold (t mm)
-    ransac_ratio = 0.95  # ratio of inliers required to assert that 85%
+    ransac_ratio = 0.96  # ratio of inliers required to assert that 95%
     ratio = 0.85  # verification threshold of consensus points (minimum 114 points)
 
 
