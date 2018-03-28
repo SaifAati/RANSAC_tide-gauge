@@ -315,9 +315,6 @@ def RansacMethod(ransac_iterations,ransac_threshold,ransac_ratio,ratio):
         # Find out possible parameters corresponding to the random points
         # by solving the non linear system
         # ===============================================================
-        if (n == 11):
-            possible_parameters = SolveModelFunction(parameters=ini_parameters)
-            print("Possible_parameters=\n", possible_parameters)
         if (n > 11):
             date_ = maybe_points[:, 0]
             h_mm_ = maybe_points[:, 1]
